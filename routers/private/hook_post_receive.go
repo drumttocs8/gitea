@@ -27,6 +27,7 @@ import (
 	gitea_context "code.gitea.io/gitea/services/context"
 	pull_service "code.gitea.io/gitea/services/pull"
 	repo_service "code.gitea.io/gitea/services/repository"
+	"code.gitea.io/gitea/services/scada"
 )
 
 // HookPostReceive updates services and users
@@ -159,6 +160,20 @@ func HookPostReceive(ctx *gitea_context.PrivateContext) {
 				Err: fmt.Sprintf("Failed to Update: %s/%s Error: %v", ownerName, repoName, err),
 			})
 			return
+		}
+
+		if opts.UserID != user_model.ActionsUserID {
+			if gitRepo == nil {
+				var err error
+				gitRepo, err = gitrepo.OpenRepository(ctx, repo)
+				if err != nil {
+					log.Error("Failed to open repository for SCADA processing: %s/%s Error: %v", ownerName, repoName, err)
+				} else if err := scada.EnqueueRTACJobs(ctx, repo, gitRepo, updates); err != nil {
+					log.Error("Failed to enqueue RTAC processing jobs: %s/%s Error: %v", ownerName, repoName, err)
+				}
+			} else if err := scada.EnqueueRTACJobs(ctx, repo, gitRepo, updates); err != nil {
+				log.Error("Failed to enqueue RTAC processing jobs: %s/%s Error: %v", ownerName, repoName, err)
+			}
 		}
 	}
 

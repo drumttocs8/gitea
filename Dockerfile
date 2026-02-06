@@ -54,7 +54,12 @@ RUN apk --no-cache add \
     s6 \
     sqlite \
     su-exec \
-    gnupg
+    gnupg \
+    python3 \
+    py3-pip
+
+# Install Python packages for RTAC processing
+RUN pip3 install --no-cache-dir --break-system-packages pandas openpyxl
 
 RUN addgroup \
     -S -g 1000 \

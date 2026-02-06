@@ -53,6 +53,11 @@ func (t *TemporaryUploadRepository) Close() {
 	}
 }
 
+// BasePath returns the working directory for this temporary repository.
+func (t *TemporaryUploadRepository) BasePath() string {
+	return t.basePath
+}
+
 // Clone the base repository to our path and set branch as the HEAD
 func (t *TemporaryUploadRepository) Clone(ctx context.Context, branch string, bare bool) error {
 	if err := gitrepo.CloneRepoToLocal(ctx, t.repo, t.basePath, git.CloneRepoOptions{
