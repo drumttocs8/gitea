@@ -1,0 +1,15 @@
+{{/*
+  SCADA Studio toolbar — injected at the start of <body>, above Gitea's navbar.
+*/}}
+<div class="scada-toolbar">
+  <span class="scada-brand">⚡ SCADA Studio</span>
+  <span class="scada-sep">|</span>
+  <button onclick="SCADA.uploadAndParse()" title="Upload an RTAC XML file to parse">📄 Parse Config</button>
+  <button onclick="SCADA.openApiDocs()" title="Open Sidecar API docs">📖 API</button>
+  <div class="scada-search-box">
+    <input id="scada-search-input" type="text" placeholder="Search RTAC configs…"
+           onkeydown="if(event.key==='Enter')SCADA.search(this.value)" />
+    <button onclick="SCADA.search(document.getElementById('scada-search-input').value)"
+            title="Search indexed RTAC configurations">🔍</button>
+  </div>
+</div>

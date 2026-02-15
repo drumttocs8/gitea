@@ -1,0 +1,212 @@
+{{/*
+  SCADA Studio footer — injected before </body>.
+  Contains all JavaScript: sidecar communication, search, file-action buttons.
+*/}}
+<script>
+(function() {
+  'use strict';
+
+  // ── Configuration ─────────────────────────────────────────────────────
+  // Public sidecar URL (browser→sidecar). Update if your Railway domain changes.
+  const SIDECAR = 'https://scada-studio-production.up.railway.app';
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+
+  function showModal(title, content, isHtml) {
+    const overlay = document.createElement('div');
+    overlay.className = 'scada-modal-overlay';
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.remove();
+    });
+    const modal = document.createElement('div');
+    modal.className = 'scada-modal';
+    const close = document.createElement('button');
+    close.className = 'scada-close';
+    close.textContent = '✕';
+    close.addEventListener('click', function() { overlay.remove(); });
+    const heading = document.createElement('h3');
+    heading.textContent = title;
+    modal.appendChild(close);
+    modal.appendChild(heading);
+    if (isHtml) {
+      const div = document.createElement('div');
+      div.innerHTML = content;
+      modal.appendChild(div);
+    } else {
+      const pre = document.createElement('pre');
+      pre.textContent = content;
+      modal.appendChild(pre);
+    }
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+
+  // ── Global SCADA namespace ────────────────────────────────────────────
+
+  window.SCADA = {
+    sidecarUrl: SIDECAR,
+
+    // Search indexed RTAC configs
+    search: async function(query) {
+      if (!query) {
+        query = prompt('Search RTAC configs:');
+        if (!query) return;
+      }
+      try {
+        const resp = await fetch(SIDECAR + '/api/search', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({query: query, top_k: 20})
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        if (!data.results || data.results.length === 0) {
+          showModal('Search Results', 'No results found for: ' + query, false);
+          return;
+        }
+        const html = data.results.map(function(r) {
+          const link = '/' + r.repo + '/src/branch/main/' + r.file_path;
+          return '<div style="padding:6px 0;border-bottom:1px solid #eee">' +
+            '<a href="' + link + '"><strong>' + r.file_path + '</strong></a>' +
+            ' <small>(' + r.repo + ')</small>' +
+            (r.device_name ? '<br>Device: ' + r.device_name : '') +
+            '</div>';
+        }).join('');
+        showModal('Search: ' + query, html, true);
+      } catch (err) {
+        showModal('Search Error', 'Could not reach sidecar: ' + err.message, false);
+      }
+    },
+
+    // Upload and parse an RTAC XML file
+    uploadAndParse: function() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.xml,.exp';
+      input.addEventListener('change', async function() {
+        if (!input.files.length) return;
+        const file = input.files[0];
+        try {
+          const fd = new FormData();
+          fd.append('file', file);
+          const resp = await fetch(SIDECAR + '/api/parse', {
+            method: 'POST',
+            body: fd
+          });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const data = await resp.json();
+          showModal(
+            'Parsed: ' + data.filename,
+            JSON.stringify(data, null, 2),
+            false
+          );
+        } catch (err) {
+          showModal('Parse Error', err.message, false);
+        }
+      });
+      input.click();
+    },
+
+    // Open sidecar API docs
+    openApiDocs: function() {
+      window.open(SIDECAR + '/docs', '_blank');
+    },
+
+    // Generate points list for current file
+    generatePointsList: async function(repo, ref, filePath, format) {
+      try {
+        // Fetch raw file from Gitea
+        const rawUrl = '/' + repo + '/raw/branch/' + ref + '/' + filePath;
+        const rawResp = await fetch(rawUrl);
+        if (!rawResp.ok) throw new Error('Could not fetch file');
+        const blob = await rawResp.blob();
+        const fd = new FormData();
+        fd.append('file', blob, filePath.split('/').pop());
+        const resp = await fetch(
+          SIDECAR + '/api/parse/points-list?format=' + (format || 'json'),
+          { method: 'POST', body: fd }
+        );
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        showModal('Points List: ' + filePath.split('/').pop(), JSON.stringify(data, null, 2), false);
+      } catch (err) {
+        showModal('Points List Error', err.message, false);
+      }
+    },
+
+    // Find similar configs for current file
+    findSimilar: async function(repo, filePath) {
+      try {
+        const resp = await fetch(SIDECAR + '/api/similar', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({text: repo + ' ' + filePath, top_k: 10})
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        if (!data.results || data.results.length === 0) {
+          showModal('Similar Configs', 'No similar configurations found.', false);
+          return;
+        }
+        const html = data.results.map(function(r) {
+          const link = '/' + r.repo + '/src/branch/main/' + r.file_path;
+          return '<div style="padding:6px 0;border-bottom:1px solid #eee">' +
+            '<a href="' + link + '"><strong>' + r.file_path + '</strong></a>' +
+            ' <small>(' + r.repo + ')</small>' +
+            (r.device_name ? '<br>Device: ' + r.device_name : '') +
+            '</div>';
+        }).join('');
+        showModal('Similar Configs', html, true);
+      } catch (err) {
+        showModal('Similar Configs Error', err.message, false);
+      }
+    }
+  };
+
+  // ── Per-file action buttons (XML files only) ─────────────────────────
+
+  const fileView = document.querySelector('.file-view');
+  if (!fileView) return;
+
+  const path = window.location.pathname;
+  if (!path.endsWith('.xml')) return;
+
+  // Extract repo info: /owner/repo/src/branch/main/path/to/file.xml
+  const match = path.match(/^\/([^/]+\/[^/]+)\/(?:src|raw)\/(?:branch|commit)\/([^/]+)\/(.+)$/);
+  if (!match) return;
+
+  const repo = match[1];
+  const ref = match[2];
+  const filePath = match[3];
+
+  // Create action buttons bar
+  const bar = document.createElement('div');
+  bar.className = 'scada-file-actions';
+
+  var btn;
+
+  btn = document.createElement('button');
+  btn.textContent = '📄 Generate Points List';
+  btn.addEventListener('click', function() { SCADA.generatePointsList(repo, ref, filePath, 'json'); });
+  bar.appendChild(btn);
+
+  btn = document.createElement('button');
+  btn.textContent = '📋 Points List (CSV)';
+  btn.addEventListener('click', function() { SCADA.generatePointsList(repo, ref, filePath, 'csv'); });
+  bar.appendChild(btn);
+
+  btn = document.createElement('button');
+  btn.textContent = '🔗 Find Similar Configs';
+  btn.addEventListener('click', function() { SCADA.findSimilar(repo, filePath); });
+  bar.appendChild(btn);
+
+  btn = document.createElement('button');
+  btn.textContent = '🔍 Search Related';
+  btn.addEventListener('click', function() { SCADA.search(filePath); });
+  bar.appendChild(btn);
+
+  // Insert after file header
+  const fileHeader = document.querySelector('.file-header') || fileView;
+  fileHeader.parentNode.insertBefore(bar, fileHeader.nextSibling);
+})();
+</script>

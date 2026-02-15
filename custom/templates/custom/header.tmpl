@@ -1,0 +1,120 @@
+{{/*
+  SCADA Studio — injected into <head>.
+  Provides CSS for the SCADA toolbar and file-action buttons.
+*/}}
+<style>
+  /* ── SCADA Toolbar (top bar) ───────────────────────────── */
+  .scada-toolbar {
+    background: #1a2332;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    border-bottom: 1px solid #2d3748;
+    flex-wrap: wrap;
+  }
+  .scada-toolbar .scada-brand {
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-right: 4px;
+  }
+  .scada-toolbar .scada-sep {
+    color: #4a5568;
+  }
+  .scada-toolbar button {
+    background: transparent;
+    border: 1px solid #4a5568;
+    color: #63b3ed;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .scada-toolbar button:hover {
+    background: #2d3748;
+    color: #90cdf4;
+  }
+  .scada-toolbar .scada-search-box {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+  }
+  .scada-toolbar .scada-search-box input {
+    background: #2d3748;
+    border: 1px solid #4a5568;
+    color: #e2e8f0;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 220px;
+  }
+  .scada-toolbar .scada-search-box input::placeholder {
+    color: #718096;
+  }
+
+  /* ── File-view action buttons ──────────────────────────── */
+  .scada-file-actions {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0;
+    padding: 0 16px;
+  }
+  .scada-file-actions button {
+    background: #f0f6fc;
+    border: 1px solid #d0d7de;
+    color: #24292f;
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .scada-file-actions button:hover {
+    background: #ddf4ff;
+    border-color: #54aeff;
+  }
+
+  /* ── Results modal ─────────────────────────────────────── */
+  .scada-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .scada-modal {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 720px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    position: relative;
+  }
+  .scada-modal h3 { margin: 0 0 12px; }
+  .scada-modal pre {
+    background: #f6f8fa;
+    padding: 12px;
+    border-radius: 6px;
+    overflow: auto;
+    font-size: 12px;
+    max-height: 50vh;
+  }
+  .scada-modal .scada-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #666;
+  }
+</style>
